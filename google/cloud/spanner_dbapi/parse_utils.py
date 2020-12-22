@@ -279,7 +279,8 @@ def parse_insert(insert_sql, params):
         for item in after_values_sql:
             if item.count("%s") > 0:
                 raise ProgrammingError(
-                    'no params yet there are %d "%%s" tokens' % item.count("%s")
+                    'no params yet there are %d "%%s" tokens'
+                    % item.count("%s")
                 )
 
         insert_sql = sanitize_literals_for_upload(insert_sql)
@@ -507,17 +508,13 @@ def get_param_types(params):
     :rtype: :class:`dict`
     :returns: The types index for the given parameters.
     """
-    if params is None:
-        return
-
-    param_types = {}
-
-    for key, value in params.items():
-        type_ = type(value)
-        if type_ in TYPES_MAP:
-            param_types[key] = TYPES_MAP[type_]
-
-    return param_types
+    # Default to STRING following
+    # https://github.com/googleapis/python-spanner-django/issues/566#issuecomment-748870699
+    if params is not None:
+        return {
+            key: TYPES_MAP.get(type(value), spanner.param_types.STRING)
+            for key, value in params.items()
+        }
 
 
 def ensure_where_clause(sql):
@@ -528,7 +525,10 @@ def ensure_where_clause(sql):
     :type sql: `str`
     :param sql: SQL code to check.
     """
-    if any(isinstance(token, sqlparse.sql.Where) for token in sqlparse.parse(sql)[0]):
+    if any(
+        isinstance(token, sqlparse.sql.Where)
+        for token in sqlparse.parse(sql)[0]
+    ):
         return sql
 
     return sql + " WHERE 1=1"
